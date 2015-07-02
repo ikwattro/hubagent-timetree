@@ -1,0 +1,46 @@
+2.2.2.31.23:
+    - upgraded to Neo4j 2.2.2 and GraphAware Framework 2.2.2.31
+    - fixed issue #28 (TimeTree being rebuilt after restart, even when unnecessary)
+    - querying for events now takes a set of relationship types, rather than a single one (issue #22)
+    - auto-attachment supporting multiple tree roots (#26)
+    - events with deleted timestamps are automatically detached
+    - events are reattached after restart if configuration changes (issue #29)
+
+2.2.1.30.21:
+    - fixed occasionally failing tests due to incorrect fix of issue #20
+
+2.2.1.30.20:
+    - fixed issue #20
+
+2.2.0.30.20:
+    - no changes
+
+2.2.0.28.20:
+    - ability to automatically attach events to the tree
+    -fixed https://github.com/graphaware/neo4j-timetree/issues/12
+
+2.1.7.28.20:
+    -fixed https://github.com/graphaware/neo4j-timetree/issues/13
+    -fixed https://github.com/graphaware/neo4j-timetree/issues/14
+
+2.1.7.28.19:
+    -no changes
+
+2.1.6.27.19:
+    -no changes
+
+2.1.6.26.19:
+    -fixed issue #9 (NPE when requesting events in a range before any existing events)
+
+2.1.6.26.18:
+    -no changes
+
+2.1.5.25.18:
+    -no changes
+
+2.1.5.24.18:
+    - fixed a timezone support bug, timezones are now case-sensitive
+    - fixed issue with external dependencies bundled with the .jar in Maven Central
+    - consistent equality checks
+    - less Spring
+    - ability to remove unused time instants or delete the entire tree (thanks to Thomas Baum!)
