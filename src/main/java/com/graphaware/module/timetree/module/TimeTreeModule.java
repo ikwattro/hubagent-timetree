@@ -29,10 +29,7 @@ import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import com.graphaware.tx.executor.batch.IterableInputBatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.UnitOfWork;
 import com.graphaware.tx.executor.single.TransactionCallback;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.*;
 import org.neo4j.tooling.GlobalGraphOperations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,6 +128,14 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
         TimedEvents timedEventsToUse;
         if (configuration.getCustomTimeTreeRootProperty() != null && created.hasProperty(configuration.getCustomTimeTreeRootProperty())) {
             timedEventsToUse = new TimeTreeBackedEvents(new CustomRootTimeTree(created.getGraphDatabase().getNodeById(getLong(created, configuration.getCustomTimeTreeRootProperty()))));
+        } else if (configuration.getDynamicRoot().isDefined() && created.hasProperty(configuration.getDynamicRoot().getRootPropertyValueRef())){
+            Label rootLabel = DynamicLabel.label(configuration.getDynamicRoot().getRootLabel());
+            Node root = created.getGraphDatabase().findNode(rootLabel, configuration.getDynamicRoot().getRootPropertyNameRef(), created.getProperty(configuration.getDynamicRoot().getRootPropertyValueRef()));
+            if (root != null) {
+                timedEventsToUse = new TimeTreeBackedEvents(new CustomRootTimeTree(root));
+            } else {
+                timedEventsToUse = timedEvents;
+            }
         } else {
             timedEventsToUse = timedEvents;
         }

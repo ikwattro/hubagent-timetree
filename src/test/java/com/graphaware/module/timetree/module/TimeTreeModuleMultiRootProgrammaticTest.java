@@ -20,6 +20,7 @@ import com.graphaware.common.kv.GraphKeyValueStore;
 import com.graphaware.common.kv.KeyValueStore;
 import com.graphaware.common.policy.NodeInclusionPolicy;
 import com.graphaware.common.serialize.Serializer;
+import com.graphaware.module.timetree.domain.DynamicRoot;
 import com.graphaware.module.timetree.domain.Resolution;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
@@ -220,6 +221,60 @@ public class TimeTreeModuleMultiRootProgrammaticTest extends DatabaseIntegration
         assertSameGraph(getDatabase(), "CREATE " +
                         "(event:Email {subject:'Neo4j', rootId:1, time:" + TIMESTAMP + "})," +
                         "(root:CustomRoot {name:'CustomRoot'})," +
+                        "(root)-[:FIRST]->(year:Year {value:2015})," +
+                        "(root)-[:CHILD]->(year)," +
+                        "(root)-[:LAST]->(year)," +
+                        "(year)-[:FIRST]->(month:Month {value:4})," +
+                        "(year)-[:CHILD]->(month)," +
+                        "(year)-[:LAST]->(month)," +
+                        "(month)-[:FIRST]->(day:Day {value:5})," +
+                        "(month)-[:CHILD]->(day)," +
+                        "(month)-[:LAST]->(day)," +
+                        "(day)-[:FIRST]->(hour:Hour {value:13})," + //1 hour more!
+                        "(day)-[:CHILD]->(hour)," +
+                        "(day)-[:LAST]->(hour)," +
+                        "(hour)-[:FIRST]->(minute:Minute {value:55})," +
+                        "(hour)-[:CHILD]->(minute)," +
+                        "(hour)-[:LAST]->(minute)," +
+                        "(minute)<-[:SENT_AT]-(event)"
+        );
+    }
+
+    @Test
+    public void shouldAttachEventWithDynamicRoot() {
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
+        DynamicRoot dynamicRoot = new DynamicRoot("User:id:user_id");
+        runtime.registerModule(new TimeTreeModule("timetree",
+                TimeTreeConfiguration
+                        .defaultConfiguration()
+                        .withDynamicRoot(dynamicRoot)
+                        .withTimestampProperty("time")
+                        .with(new NodeInclusionPolicy() {
+                            @Override
+                            public boolean include(Node node) {
+                                return node.hasLabel(Email);
+                            }
+                        })
+                        .withRelationshipType(DynamicRelationshipType.withName("SENT_AT"))
+                        .withTimeZone(DateTimeZone.forTimeZone(TimeZone.getTimeZone("GMT+1")))
+                        .withTimestampProperty("time")
+                        .withResolution(Resolution.MINUTE)
+                ,
+                getDatabase()));
+        runtime.start();
+
+        createUserAsRoot();
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node node = getDatabase().createNode(Email);
+            node.setProperty("subject", "Neo4j");
+            node.setProperty("time", TIMESTAMP);
+            node.setProperty("user_id", 123);
+            tx.success();
+        }
+
+        assertSameGraph(getDatabase(), "CREATE " +
+                        "(event:Email {subject:'Neo4j', user_id:123, time:" + TIMESTAMP + "})," +
+                        "(root:User {id:123})," +
                         "(root)-[:FIRST]->(year:Year {value:2015})," +
                         "(root)-[:CHILD]->(year)," +
                         "(root)-[:LAST]->(year)," +
@@ -596,5 +651,13 @@ public class TimeTreeModuleMultiRootProgrammaticTest extends DatabaseIntegration
             tx.success();
         }
         return id;
+    }
+
+    private void createUserAsRoot() {
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node node = getDatabase().createNode(DynamicLabel.label("User"));
+            node.setProperty("id", 123);
+            tx.success();
+        }
     }
 }

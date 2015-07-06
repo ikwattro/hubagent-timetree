@@ -17,6 +17,7 @@
 package com.graphaware.module.timetree.module;
 
 import com.graphaware.common.policy.NodeInclusionPolicy;
+import com.graphaware.module.timetree.domain.DynamicRoot;
 import com.graphaware.module.timetree.domain.Resolution;
 import com.graphaware.runtime.config.function.StringToNodeInclusionPolicy;
 import com.graphaware.runtime.module.RuntimeModule;
@@ -45,6 +46,7 @@ public class TimeTreeModuleBootstrapper implements RuntimeModuleBootstrapper {
     private static final String TIME_ZONE = "timezone";
     private static final String RELATIONSHIP = "relationship";
     private static final String AUTO_ATTACH = "autoAttach";
+    private static final String DYNAMIC_ROOT = "dynamicRoot";
 
     /**
      * {@inheritDoc}
@@ -93,6 +95,12 @@ public class TimeTreeModuleBootstrapper implements RuntimeModuleBootstrapper {
             boolean autoAttach = Boolean.valueOf(config.get(AUTO_ATTACH));
             LOG.info("AutoAttach set to {}", autoAttach);
             configuration = configuration.withAutoAttach(autoAttach);
+        }
+
+        if (config.get(DYNAMIC_ROOT) != null) {
+            DynamicRoot dynamicRoot = new DynamicRoot(config.get(DYNAMIC_ROOT));
+            LOG.info("Dynamic root set to {}", dynamicRoot.getDefinition());
+            configuration = configuration.withDynamicRoot(dynamicRoot);
         }
 
         return new TimeTreeModule(moduleId, configuration, database);
