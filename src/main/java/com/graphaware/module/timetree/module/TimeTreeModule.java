@@ -28,13 +28,13 @@ import com.graphaware.tx.event.improved.api.Change;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import com.graphaware.tx.executor.batch.BatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.IterableInputBatchTransactionExecutor;
-import com.graphaware.tx.executor.batch.MultiThreadedBatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.UnitOfWork;
 import com.graphaware.tx.executor.single.TransactionCallback;
 import org.neo4j.graphdb.*;
-import org.neo4j.tooling.GlobalGraphOperations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Iterator;
 
 import static com.graphaware.common.util.PropertyContainerUtils.getLong;
 
@@ -94,26 +94,28 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
             return;
         }
 
-        BatchTransactionExecutor batchExecutor = new IterableInputBatchTransactionExecutor<>(database, 1000, new TransactionCallback<Iterable<Node>>() {
-            @Override
-            public Iterable<Node> doInTransaction(GraphDatabaseService database) throws Exception {
-                return GlobalGraphOperations.at(database).getAllNodes();
-            }
-        }, new UnitOfWork<Node>() {
-            @Override
-            public void execute(GraphDatabaseService database, Node input, int batchNumber, int stepNumber) {
-                if (stepNumber == 1) {
-                    LOG.info("Attaching existing events to TimeTree in batch " + batchNumber);
+        BatchTransactionExecutor executor = new IterableInputBatchTransactionExecutor<>(database, 10,
+                new UnitOfWork<Node>() {
+                    @Override
+                    public void execute(GraphDatabaseService database, Node input, int batchNumber, int stepNumber) {
+                        if (stepNumber == 1) {
+                            LOG.info("Attaching existing events to TimeTree in batch " + batchNumber);
+                        }
+                        if (configuration.getInclusionPolicies().getNodeInclusionPolicy().include(input)) {
+                            deleteTimeTreeRelationship(input);
+                            createTimeTreeRelationship(input);
+                        }
+                    }
+                },
+                new TransactionCallback<Iterator<Node>>() {
+                    @Override
+                    public Iterator<Node> doInTransaction(GraphDatabaseService database) throws Exception {
+                        return database.findNodes(DynamicLabel.label("GithubEvent"));
+                    }
                 }
-                if (configuration.getInclusionPolicies().getNodeInclusionPolicy().include(input)) {
-                    deleteTimeTreeRelationship(input);
-                    createTimeTreeRelationship(input);
-                }
-            }
-        });
+        );
 
-        BatchTransactionExecutor multi = new MultiThreadedBatchTransactionExecutor(batchExecutor, 4);
-        multi.execute();
+        executor.execute();
 
 
     }
