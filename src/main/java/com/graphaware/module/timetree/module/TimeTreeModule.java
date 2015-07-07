@@ -26,7 +26,9 @@ import com.graphaware.runtime.module.BaseTxDrivenModule;
 import com.graphaware.runtime.module.DeliberateTransactionRollbackException;
 import com.graphaware.tx.event.improved.api.Change;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
+import com.graphaware.tx.executor.batch.BatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.IterableInputBatchTransactionExecutor;
+import com.graphaware.tx.executor.batch.MultiThreadedBatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.UnitOfWork;
 import com.graphaware.tx.executor.single.TransactionCallback;
 import org.neo4j.graphdb.*;
@@ -92,7 +94,7 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
             return;
         }
 
-        new IterableInputBatchTransactionExecutor<>(database, 1000, new TransactionCallback<Iterable<Node>>() {
+        BatchTransactionExecutor batchExecutor = new IterableInputBatchTransactionExecutor<>(database, 1000, new TransactionCallback<Iterable<Node>>() {
             @Override
             public Iterable<Node> doInTransaction(GraphDatabaseService database) throws Exception {
                 return GlobalGraphOperations.at(database).getAllNodes();
@@ -108,7 +110,12 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
                     createTimeTreeRelationship(input);
                 }
             }
-        }).execute();
+        });
+
+        BatchTransactionExecutor multi = new MultiThreadedBatchTransactionExecutor(batchExecutor, 4);
+        multi.execute();
+
+
     }
 
     private void createTimeTreeRelationship(Node created) {

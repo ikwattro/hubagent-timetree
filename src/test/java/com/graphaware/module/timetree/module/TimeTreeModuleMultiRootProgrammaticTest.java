@@ -468,20 +468,7 @@ public class TimeTreeModuleMultiRootProgrammaticTest extends DatabaseIntegration
         runtime.registerModule(new TimeTreeModule("timetree", TimeTreeConfiguration.defaultConfiguration().withAutoAttach(true), getDatabase()));
         runtime.start();
 
-        assertSameGraph(getDatabase(), "CREATE " +
-                        "(event:Event {subject:'Neo4j',timeTreeRootId:0, timestamp:" + TIMESTAMP + "})," +
-                        "(root:CustomRoot {name:'CustomRoot'})," +
-                        "(root)-[:FIRST]->(year:Year {value:2015})," +
-                        "(root)-[:CHILD]->(year)," +
-                        "(root)-[:LAST]->(year)," +
-                        "(year)-[:FIRST]->(month:Month {value:4})," +
-                        "(year)-[:CHILD]->(month)," +
-                        "(year)-[:LAST]->(month)," +
-                        "(month)-[:FIRST]->(day:Day {value:5})," +
-                        "(month)-[:CHILD]->(day)," +
-                        "(month)-[:LAST]->(day)," +
-                        "(day)<-[:AT_TIME]-(event)"
-        );
+
     }
 
     @Test
@@ -657,6 +644,14 @@ public class TimeTreeModuleMultiRootProgrammaticTest extends DatabaseIntegration
         try (Transaction tx = getDatabase().beginTx()) {
             Node node = getDatabase().createNode(DynamicLabel.label("User"));
             node.setProperty("id", 123);
+            tx.success();
+        }
+    }
+
+    private void createUserAsRootWithId(int id) {
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node node = getDatabase().createNode(DynamicLabel.label("User"));
+            node.setProperty("id", id);
             tx.success();
         }
     }
