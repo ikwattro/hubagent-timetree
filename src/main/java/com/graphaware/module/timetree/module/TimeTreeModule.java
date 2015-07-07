@@ -31,6 +31,7 @@ import com.graphaware.tx.executor.batch.IterableInputBatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.UnitOfWork;
 import com.graphaware.tx.executor.single.TransactionCallback;
 import org.neo4j.graphdb.*;
+import org.neo4j.helpers.collection.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +96,12 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
         }
 
         BatchTransactionExecutor executor = new IterableInputBatchTransactionExecutor<>(database, 10,
+                new TransactionCallback<Iterable<Node>>() {
+                    @Override
+                    public Iterable<Node> doInTransaction(GraphDatabaseService database) throws Exception {
+                        return Iterables.asResourceIterable(database.findNodes(DynamicLabel.label("GithubEvent")));
+                    }
+                },
                 new UnitOfWork<Node>() {
                     @Override
                     public void execute(GraphDatabaseService database, Node input, int batchNumber, int stepNumber) {
@@ -105,12 +112,6 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
                             deleteTimeTreeRelationship(input);
                             createTimeTreeRelationship(input);
                         }
-                    }
-                },
-                new TransactionCallback<Iterator<Node>>() {
-                    @Override
-                    public Iterator<Node> doInTransaction(GraphDatabaseService database) throws Exception {
-                        return database.findNodes(DynamicLabel.label("GithubEvent"));
                     }
                 }
         );
