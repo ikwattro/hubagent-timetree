@@ -31,11 +31,11 @@ import com.graphaware.tx.executor.batch.IterableInputBatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.UnitOfWork;
 import com.graphaware.tx.executor.single.TransactionCallback;
 import org.neo4j.graphdb.*;
-import org.neo4j.helpers.collection.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
+import java.util.HashSet;
+import java.util.Set;
 
 import static com.graphaware.common.util.PropertyContainerUtils.getLong;
 
@@ -91,15 +91,24 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
      */
     @Override
     public void initialize(GraphDatabaseService database) {
-        if (!configuration.isAutoAttach()) {
+        if (!configuration.isAutoAttach() || !configuration.getInitializeLabelsRestriction().hasLabelsRestriction()) {
             return;
         }
 
-        BatchTransactionExecutor executor = new IterableInputBatchTransactionExecutor<>(database, 10,
+        BatchTransactionExecutor executor = new IterableInputBatchTransactionExecutor<>(database, 100,
                 new TransactionCallback<Iterable<Node>>() {
                     @Override
                     public Iterable<Node> doInTransaction(GraphDatabaseService database) throws Exception {
-                        return Iterables.asResourceIterable(database.findNodes(DynamicLabel.label("GithubEvent")));
+                        Set<Node> events = new HashSet<>();
+                        for (Object l : configuration.getInitializeLabelsRestriction().getLabelsRestriction()) {
+                            LOG.info("Retrieving " + l.toString() + " nodes for intialize");
+                            ResourceIterator<Node> nodesI = database.findNodes((Label) l);
+                            while (nodesI.hasNext()) {
+                                events.add(nodesI.next());
+                            }
+                        }
+
+                        return events;
                     }
                 },
                 new UnitOfWork<Node>() {

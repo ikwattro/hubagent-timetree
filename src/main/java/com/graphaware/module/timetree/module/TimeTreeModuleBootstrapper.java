@@ -18,6 +18,7 @@ package com.graphaware.module.timetree.module;
 
 import com.graphaware.common.policy.NodeInclusionPolicy;
 import com.graphaware.module.timetree.domain.DynamicRoot;
+import com.graphaware.module.timetree.domain.InitializeLabelsRestriction;
 import com.graphaware.module.timetree.domain.Resolution;
 import com.graphaware.runtime.config.function.StringToNodeInclusionPolicy;
 import com.graphaware.runtime.module.RuntimeModule;
@@ -47,6 +48,7 @@ public class TimeTreeModuleBootstrapper implements RuntimeModuleBootstrapper {
     private static final String RELATIONSHIP = "relationship";
     private static final String AUTO_ATTACH = "autoAttach";
     private static final String DYNAMIC_ROOT = "dynamicRoot";
+    private static final String INITIALIZED_LABELS = "initializedLabels";
 
     /**
      * {@inheritDoc}
@@ -101,6 +103,12 @@ public class TimeTreeModuleBootstrapper implements RuntimeModuleBootstrapper {
             DynamicRoot dynamicRoot = new DynamicRoot(config.get(DYNAMIC_ROOT));
             LOG.info("Dynamic root set to {}", dynamicRoot.getDefinition());
             configuration = configuration.withDynamicRoot(dynamicRoot);
+        }
+
+        if (config.get(INITIALIZED_LABELS) != null) {
+            InitializeLabelsRestriction initializeLabelsRestriction = new InitializeLabelsRestriction(config.get(INITIALIZED_LABELS));
+            LOG.info("Initialized labels set to {}", initializeLabelsRestriction.toString());
+            configuration = configuration.withInitializeLabelsRestriction(initializeLabelsRestriction);
         }
 
         return new TimeTreeModule(moduleId, configuration, database);

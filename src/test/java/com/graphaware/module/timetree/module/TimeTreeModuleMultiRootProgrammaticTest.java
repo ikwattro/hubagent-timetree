@@ -21,6 +21,7 @@ import com.graphaware.common.kv.KeyValueStore;
 import com.graphaware.common.policy.NodeInclusionPolicy;
 import com.graphaware.common.serialize.Serializer;
 import com.graphaware.module.timetree.domain.DynamicRoot;
+import com.graphaware.module.timetree.domain.InitializeLabelsRestriction;
 import com.graphaware.module.timetree.domain.Resolution;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
@@ -466,6 +467,20 @@ public class TimeTreeModuleMultiRootProgrammaticTest extends DatabaseIntegration
 
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
         runtime.registerModule(new TimeTreeModule("timetree", TimeTreeConfiguration.defaultConfiguration().withAutoAttach(true), getDatabase()));
+        runtime.start();
+
+
+    }
+
+    @Test
+    public void shouldAttachExistingEventsWhenModuleRegisteredForTheFirstTimeWithAutoAttachEnabledAndInitializedLabelsDefined() {
+        createEvent(createCustomRoot());
+
+        assertSameGraph(getDatabase(), "CREATE (root:CustomRoot {name:'CustomRoot'}), (:Event {subject: 'Neo4j', timeTreeRootId:0, timestamp:" + TIMESTAMP + "})");
+
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
+        InitializeLabelsRestriction initializeLabelsRestriction = new InitializeLabelsRestriction("Event,GithubEvent");
+        runtime.registerModule(new TimeTreeModule("timetree", TimeTreeConfiguration.defaultConfiguration().withAutoAttach(true).withInitializeLabelsRestriction(initializeLabelsRestriction), getDatabase()));
         runtime.start();
 
 
