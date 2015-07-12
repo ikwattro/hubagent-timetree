@@ -29,13 +29,11 @@ import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import com.graphaware.tx.executor.batch.BatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.IterableInputBatchTransactionExecutor;
 import com.graphaware.tx.executor.batch.UnitOfWork;
+import com.graphaware.tx.executor.input.TransactionalInput;
 import com.graphaware.tx.executor.single.TransactionCallback;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import static com.graphaware.common.util.PropertyContainerUtils.getLong;
 
@@ -90,27 +88,19 @@ public class TimeTreeModule extends BaseTxDrivenModule<Void> {
      * {@inheritDoc}
      */
     @Override
-    public void initialize(GraphDatabaseService database) {
+    public void initialize(final GraphDatabaseService database) {
         if (!configuration.isAutoAttach() || !configuration.getInitializeLabelsRestriction().hasLabelsRestriction()) {
             return;
         }
 
-        BatchTransactionExecutor executor = new IterableInputBatchTransactionExecutor<>(database, 100,
-                new TransactionCallback<Iterable<Node>>() {
+        BatchTransactionExecutor executor = new IterableInputBatchTransactionExecutor<>(database, 1000,
+                new TransactionalInput<>(database, 1000, new TransactionCallback<Iterable<Node>>() {
                     @Override
-                    public Iterable<Node> doInTransaction(GraphDatabaseService database) throws Exception {
-                        Set<Node> events = new HashSet<>();
-                        for (Object l : configuration.getInitializeLabelsRestriction().getLabelsRestriction()) {
-                            LOG.info("Retrieving " + l.toString() + " nodes for intialize");
-                            ResourceIterator<Node> nodesI = database.findNodes((Label) l);
-                            while (nodesI.hasNext()) {
-                                events.add(nodesI.next());
-                            }
-                        }
+                    public Iterable<Node> doInTransaction(GraphDatabaseService graphDatabaseService) throws Exception {
 
-                        return events;
+                        return database.getAllNodes();
                     }
-                },
+                }),
                 new UnitOfWork<Node>() {
                     @Override
                     public void execute(GraphDatabaseService database, Node input, int batchNumber, int stepNumber) {
